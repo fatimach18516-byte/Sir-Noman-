@@ -1,0 +1,573 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Sir Noman's Surprise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap">
+<style>
+  /* Layout: loading radar screen, then eight glass cards one at a time over drifting math symbols. Deliberately a single dark glowing look. */
+  :root {
+    color-scheme: dark;
+    --bg: #0a0918;
+    --bg-glow-a: #3a1670;
+    --bg-glow-b: #741a55;
+    --card: rgba(255, 255, 255, 0.07);
+    --line: rgba(255, 255, 255, 0.16);
+    --ink: #f7f2ff;
+    --muted: #bdb3dc;
+    --pink: #ff4f9a;
+    --pink-deep: #d92a7c;
+    --gold: #ffc857;
+    --cyan: #5ce1e6;
+    --on-pink: #1a0618;
+    --font-script: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+    --font-body: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "DM Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(60% 45% at 85% 0%, var(--bg-glow-b), transparent 70%),
+      radial-gradient(70% 55% at 0% 100%, var(--bg-glow-a), transparent 70%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding-inline: 16px;
+    overflow-x: hidden;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #bg { z-index: 0; }
+  #fx { z-index: 30; }
+
+  button { font: inherit; color: inherit; }
+  button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+
+  /* ---------- Loader ---------- */
+  #loader {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px; text-align: center;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(60% 45% at 85% 0%, var(--bg-glow-b), transparent 70%),
+      radial-gradient(70% 55% at 0% 100%, var(--bg-glow-a), transparent 70%);
+    transition: opacity 600ms ease, visibility 600ms;
+  }
+  #loader.gone { opacity: 0; visibility: hidden; }
+  #loader h1 {
+    margin: 0;
+    font-family: var(--font-script);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 8vw, 2.7rem);
+    line-height: 1.2;
+    max-width: 14em;
+    text-wrap: balance;
+  }
+  .radar {
+    position: relative;
+    width: min(62vw, 240px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(circle, transparent 0 22%, rgba(92, 225, 230, 0.16) 22.5% 23%, transparent 23.5% 46%, rgba(92, 225, 230, 0.16) 46.5% 47%, transparent 47.5% 70%, rgba(92, 225, 230, 0.16) 70.5% 71%, transparent 71.5%),
+      rgba(92, 225, 230, 0.04);
+    box-shadow: 0 0 40px rgba(92, 225, 230, 0.12), inset 0 0 30px rgba(92, 225, 230, 0.08);
+  }
+  .sweep {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 72%, rgba(92, 225, 230, 0.5) 100%);
+    animation: spin 2.2s linear infinite;
+    transition: opacity 500ms;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .person {
+    position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    border-radius: 50%; background: var(--cyan);
+    animation: blink 2.2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+  .match {
+    position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border-radius: 50%; background: var(--gold);
+    box-shadow: 0 0 0 0 rgba(255, 200, 87, 0.7), 0 0 28px 6px rgba(255, 200, 87, 0.6);
+    opacity: 0; transform: scale(0.2);
+    transition: opacity 400ms, transform 500ms cubic-bezier(.2, 1.6, .4, 1);
+  }
+  .found .match { opacity: 1; transform: scale(1); animation: ring 1.6s ease-out infinite; }
+  .found .sweep { opacity: 0; }
+  .found .person { animation: none; opacity: 0.12; }
+  @keyframes ring { 70% { box-shadow: 0 0 0 26px rgba(255, 200, 87, 0), 0 0 28px 6px rgba(255, 200, 87, 0.6); } 100% { box-shadow: 0 0 0 0 rgba(255, 200, 87, 0), 0 0 28px 6px rgba(255, 200, 87, 0.6); } }
+
+  .scan-info { display: flex; flex-direction: column; gap: 8px; align-items: center; min-height: 92px; width: min(100%, 340px); }
+  .scan-count { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.08em; color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .scan-status { color: var(--muted); font-size: 0.98rem; min-height: 1.5em; }
+  .bar { width: 100%; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--pink)); border-radius: inherit; }
+  .result { display: none; flex-direction: column; align-items: center; gap: 6px; }
+  .found .scan-info { display: none; }
+  .found .result { display: flex; animation: rise 600ms ease both; }
+  .result .tag { font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+  .result .name { font-family: var(--font-script); font-weight: 700; font-size: clamp(2.8rem, 14vw, 4.2rem); line-height: 1.1; text-shadow: 0 0 28px rgba(255, 79, 154, 0.7); }
+  .result .sub { color: var(--muted); }
+  .loader-actions { min-height: 52px; display: flex; align-items: center; }
+  #meet { display: none; }
+  .found #meet { display: inline-flex; animation: rise 600ms 300ms ease both; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 10px 26px;
+    border: 0; border-radius: 999px;
+    background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+    color: #fff; font-weight: 600; font-size: 1rem; letter-spacing: 0.01em;
+    box-shadow: 0 8px 26px -6px rgba(255, 79, 154, 0.65);
+    cursor: pointer; white-space: nowrap;
+    transition: transform 150ms, box-shadow 150ms;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -6px rgba(255, 79, 154, 0.8); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line); box-shadow: none; font-weight: 400; }
+  .btn.gold { background: linear-gradient(135deg, var(--gold), #ff9f43); color: var(--on-pink); box-shadow: 0 8px 26px -6px rgba(255, 200, 87, 0.6); }
+
+  /* ---------- App ---------- */
+  #app {
+    height: 100%; position: relative; z-index: 10;
+    display: flex; flex-direction: column;
+    max-width: 480px; margin: 0 auto;
+    padding-block: 18px 28px;
+  }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; }
+  .progress { display: flex; flex-direction: column; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.14em; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 14px; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); transition: background 300ms, width 300ms; }
+  .dots i.on { background: var(--pink); }
+  .dots i.now { width: 26px; background: var(--gold); }
+  #music { min-height: 40px; padding: 6px 16px; font-size: 0.88rem; }
+
+  .stage { flex: 1; display: flex; align-items: center; justify-content: center; padding-block: 16px; }
+  .card {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 34px 22px 30px;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7), 0 0 60px -20px rgba(255, 79, 154, 0.35);
+    animation: rise 500ms ease both;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .card > * { min-width: 0; max-width: 100%; }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  .script { font-family: var(--font-script); font-weight: 700; font-size: clamp(1.9rem, 7.4vw, 2.5rem); line-height: 1.25; margin: 0; text-wrap: balance; }
+  .small { color: var(--muted); font-size: 1rem; line-height: 1.55; margin: 0; }
+  .letter { font-family: var(--font-script); font-weight: 500; font-size: 1.32rem; line-height: 1.6; margin: 0; text-align: left; }
+  .sign { font-family: var(--font-script); font-weight: 700; font-size: 1.6rem; color: var(--gold); align-self: flex-end; margin: 0; }
+  .glow { text-shadow: 0 0 26px rgba(255, 79, 154, 0.7); }
+  .gold-text { color: var(--gold); }
+
+  .choices { position: relative; width: 100%; height: 150px; margin-top: 6px; }
+  .choices .btn { position: absolute; }
+  .choices .no { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--line); box-shadow: none; font-weight: 400; transition: left 260ms cubic-bezier(.3, 1.4, .5, 1), top 260ms cubic-bezier(.3, 1.4, .5, 1); }
+  .note { min-height: 1.5em; margin: 0; color: var(--gold); font-size: 0.98rem; }
+
+  .eq { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+  .eq .tile {
+    padding: 10px 16px; border-radius: 16px; border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.08); font-weight: 500;
+  }
+  .eq .op { font-family: var(--font-mono); font-size: 1.5rem; color: var(--cyan); }
+  .eq button.tile { cursor: pointer; border: 1px dashed var(--gold); color: var(--gold); font-weight: 600; min-width: 64px; min-height: 44px; font-size: 1.15rem; animation: pulse 1.6s ease-in-out infinite; }
+  .eq button.tile.solved { animation: none; border-style: solid; background: linear-gradient(135deg, var(--gold), #ff9f43); color: var(--on-pink); font-family: var(--font-script); font-size: 1.5rem; font-weight: 700; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(255, 200, 87, 0.16); } }
+
+  .ctrl { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sweep, .person, .card, .eq button.tile, .found .match, #loader, .result, #meet { animation: none !important; }
+    .choices .no { transition: none; }
+  }
+</style>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<section id="loader" aria-live="polite">
+  <h1 id="lh">Finding the greatest teacher in the world&hellip;</h1>
+  <div class="radar" id="radar" aria-hidden="true"><div class="sweep"></div><div class="match"></div></div>
+  <div class="scan-info">
+    <div class="scan-count" id="lc">0 people scanned</div>
+    <div class="scan-status" id="ls">Scanning every classroom on Earth&hellip;</div>
+    <div class="bar" role="presentation"><i id="lb"></i></div>
+  </div>
+  <div class="result">
+    <span class="tag">1 match found</span>
+    <span class="name">Sir Noman</span>
+    <span class="sub">The greatest teacher in the world</span>
+  </div>
+  <div class="loader-actions">
+    <button class="btn" id="meet" type="button">Open your surprise</button>
+  </div>
+</section>
+
+<main id="app" hidden>
+  <header class="top">
+    <div class="progress">
+      <span><span id="pn">01</span> / 08</span>
+      <div class="dots" id="dots"></div>
+    </div>
+    <button class="btn ghost" id="music" type="button" aria-pressed="false">&#9834; Music off</button>
+  </header>
+
+  <div class="stage">
+    <!-- 1 -->
+    <section class="card" hidden>
+      <p class="script glow">One minute, Sir Noman&hellip;</p>
+      <p class="small">I have something to ask you. Please answer honestly.</p>
+      <button class="btn" type="button" data-next>Okay, ask me</button>
+    </section>
+
+    <!-- 2 -->
+    <section class="card" hidden>
+      <p class="script">Do you know you are someone's favorite teacher?</p>
+      <div class="choices" data-dodge="1">
+        <button class="btn yes" type="button" data-next>Yes, I know</button>
+        <button class="btn no" type="button">No</button>
+      </div>
+      <p class="note" aria-live="polite"></p>
+    </section>
+
+    <!-- 3 -->
+    <section class="card" hidden>
+      <p class="script">Can I tell you a secret?</p>
+      <p class="small">It is a good one. Promise.</p>
+      <div class="ctrl">
+        <button class="btn" type="button" data-next>Tell me</button>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="card" hidden>
+      <p class="script">You make me feel comfortable.</p>
+      <p class="small">In your class I never feel scared to ask, to be wrong, or to be myself. That is rare, and I notice it every single day.</p>
+      <button class="btn" type="button" data-next>Keep going</button>
+    </section>
+
+    <!-- 5 -->
+    <section class="card" hidden id="eqcard">
+      <p class="script">Let's solve one more equation.</p>
+      <div class="eq">
+        <span class="tile">Teacher</span>
+        <span class="op">+</span>
+        <span class="tile">Friend</span>
+        <span class="op">=</span>
+        <button class="tile" type="button" id="solve" aria-label="Tap to solve the equation">?</button>
+      </div>
+      <p class="small" id="eqhint">Tap the ? to solve it.</p>
+      <button class="btn" type="button" data-next id="eqnext" hidden>Next</button>
+    </section>
+
+    <!-- 6 -->
+    <section class="card" hidden>
+      <p class="script">Will you accept a thank you from your student?</p>
+      <div class="choices" data-dodge="2">
+        <button class="btn yes" type="button" data-next>Yes, of course</button>
+        <button class="btn no" type="button">No</button>
+      </div>
+      <p class="note" aria-live="polite"></p>
+    </section>
+
+    <!-- 7 -->
+    <section class="card" hidden>
+      <p class="letter">Dear Sir Noman,</p>
+      <p class="letter">You always make me feel comfortable. I don't see you only as my teacher. I see you as my friend, and I can share everything with you. Thank you for listening, for explaining, and for being exactly who you are.</p>
+      <p class="sign">Abdul Mueez</p>
+      <button class="btn" type="button" data-next>One last thing</button>
+    </section>
+
+    <!-- 8 -->
+    <section class="card" hidden id="endcard">
+      <p class="small gold-text">&#10022; &#10022; &#10022;</p>
+      <p class="script glow">Happy Teacher's Day, Sir Noman!</p>
+      <p class="small">From your student and friend,<br><span class="gold-text" style="font-family:var(--font-script);font-size:1.5rem;font-weight:700">Abdul Mueez</span></p>
+      <div class="ctrl">
+        <button class="btn gold" type="button" id="more">More confetti</button>
+        <button class="btn ghost" type="button" id="again">Watch again</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var COLORS = ['#ff4f9a', '#ffc857', '#5ce1e6', '#b79bff'];
+
+  /* ---------- Floating math symbols ---------- */
+  var bg = $('#bg'), g = bg.getContext('2d'), W = 0, H = 0, dpr = 1, items = [];
+  var SYMS = ['π', '∑', '√', '∞', 'Δ', 'θ', '✦', '∫', '≈', '÷', '+', '★'];
+  function sizeCanvas(c) {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(window.innerWidth * dpr);
+    c.height = Math.round(window.innerHeight * dpr);
+  }
+  function buildItems() {
+    W = window.innerWidth; H = window.innerHeight;
+    sizeCanvas(bg);
+    var n = Math.max(16, Math.min(40, Math.round(W * H / 24000)));
+    items = [];
+    for (var i = 0; i < n; i++) {
+      items.push({
+        x: Math.random() * W, y: Math.random() * H,
+        s: 14 + Math.random() * 22, v: 0.15 + Math.random() * 0.4,
+        ph: Math.random() * 6.28, ch: SYMS[i % SYMS.length],
+        c: COLORS[i % COLORS.length], a: 0.1 + Math.random() * 0.22
+      });
+    }
+  }
+  function drawBg(t) {
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    for (var i = 0; i < items.length; i++) {
+      var o = items[i];
+      if (!reduce) {
+        o.y -= o.v; o.x += Math.sin(t * 0.0008 + o.ph) * 0.3;
+        if (o.y < -40) { o.y = H + 40; o.x = Math.random() * W; }
+      }
+      g.globalAlpha = o.a; g.fillStyle = o.c;
+      g.font = o.s + 'px Outfit, sans-serif';
+      g.fillText(o.ch, o.x, o.y);
+    }
+    g.globalAlpha = 1;
+    if (!reduce) requestAnimationFrame(drawBg);
+  }
+  buildItems();
+  if (reduce) drawBg(0); else requestAnimationFrame(drawBg);
+  window.addEventListener('resize', function () { buildItems(); if (reduce) drawBg(0); });
+
+  /* ---------- Confetti ---------- */
+  var fx = $('#fx'), f = fx.getContext('2d'), bits = [], fxOn = false;
+  function confetti(count) {
+    if (reduce) return;
+    sizeCanvas(fx);
+    var w = window.innerWidth;
+    for (var i = 0; i < count; i++) {
+      bits.push({
+        x: w / 2 + (Math.random() - 0.5) * 80, y: window.innerHeight * 0.35,
+        vx: (Math.random() - 0.5) * 12, vy: -Math.random() * 12 - 4,
+        r: 4 + Math.random() * 5, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4,
+        c: COLORS[i % COLORS.length], life: 0
+      });
+    }
+    if (!fxOn) { fxOn = true; requestAnimationFrame(tickFx); }
+  }
+  function tickFx() {
+    f.setTransform(dpr, 0, 0, dpr, 0, 0);
+    f.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (var i = bits.length - 1; i >= 0; i--) {
+      var b = bits[i];
+      b.vy += 0.28; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.rot += b.vr; b.life++;
+      if (b.y > window.innerHeight + 30 || b.life > 260) { bits.splice(i, 1); continue; }
+      f.save(); f.translate(b.x, b.y); f.rotate(b.rot);
+      f.globalAlpha = Math.max(0, 1 - b.life / 260);
+      f.fillStyle = b.c; f.fillRect(-b.r, -b.r / 2, b.r * 2, b.r);
+      f.restore();
+    }
+    if (bits.length) requestAnimationFrame(tickFx);
+    else { fxOn = false; f.clearRect(0, 0, window.innerWidth, window.innerHeight); }
+  }
+
+  /* ---------- Loader ---------- */
+  var loader = $('#loader'), radar = $('#radar'), foundDone = false;
+  for (var d = 0; d < 20; d++) {
+    var p = document.createElement('span');
+    p.className = 'person';
+    var ang = Math.random() * 6.283, rad = Math.sqrt(Math.random()) * 46;
+    p.style.left = (50 + rad * Math.cos(ang)) + '%';
+    p.style.top = (50 + rad * Math.sin(ang)) + '%';
+    p.style.animationDelay = (Math.random() * 2.2).toFixed(2) + 's';
+    radar.insertBefore(p, radar.querySelector('.match'));
+  }
+  var STATUS = [
+    'Scanning every classroom on Earth…',
+    'Filtering by patience…',
+    'Filtering by kindness…',
+    'Checking who feels like a friend…',
+    'Narrowing it down to one…'
+  ];
+  var DURATION = 6000, t0 = null;
+  function foundIt() {
+    if (foundDone) return;
+    foundDone = true;
+    loader.classList.add('found');
+    $('#lh').textContent = 'We found them.';
+    confetti(60);
+  }
+  function loadTick(now) {
+    if (foundDone) return;
+    if (t0 === null) t0 = now;
+    var t = Math.min((now - t0) / DURATION, 1);
+    var e = 1 - Math.pow(1 - t, 3);
+    $('#lc').textContent = Math.round(8e9 * e).toLocaleString('en-US') + ' people scanned';
+    $('#lb').style.width = (t * 100) + '%';
+    $('#ls').textContent = STATUS[Math.min(STATUS.length - 1, Math.floor(t * STATUS.length))];
+    if (t >= 1) foundIt(); else requestAnimationFrame(loadTick);
+  }
+  requestAnimationFrame(loadTick);
+
+  /* ---------- Cards ---------- */
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var dotsEl = $('#dots'), idx = 0;
+  cards.forEach(function () { dotsEl.appendChild(document.createElement('i')); });
+
+  function setupDodge(card) {
+    var area = card.querySelector('.choices');
+    var yes = area.querySelector('.yes'), no = area.querySelector('.no'), note = card.querySelector('.note');
+    var which = area.getAttribute('data-dodge');
+    var lines = which === '1'
+      ? ['No', 'Homework for you!', 'Detention!', 'Show your steps!', 'Wrong. Redo it.']
+      : ['No', 'Test tomorrow!', 'Extra homework!', 'Write it 100 times!', 'Sit down, please.'];
+    var done = which === '1' ? 'Nice try. Yes was the only answer.' : 'Accepted. Thank you, Sir.';
+    var count = 0;
+    area._reset = function () {
+      count = 0; no.hidden = false; no.textContent = lines[0]; note.textContent = '';
+      no.style.left = (area.clientWidth - no.offsetWidth) + 'px'; no.style.top = '0px';
+      yes.style.left = '0px'; yes.style.top = '0px';
+    };
+    function overlap(a, b) {
+      return !(a.x + a.w + 10 < b.x || b.x + b.w + 10 < a.x || a.y + a.h + 10 < b.y || b.y + b.h + 10 < a.y);
+    }
+    function dodge(ev) {
+      if (ev) { ev.preventDefault(); }
+      count++;
+      if (count >= lines.length) {
+        no.hidden = true; note.textContent = done;
+        yes.classList.add('gold');
+        return;
+      }
+      no.textContent = lines[count];
+      var aw = area.clientWidth, ah = area.clientHeight;
+      var nw = no.offsetWidth, nh = no.offsetHeight;
+      var yr = { x: yes.offsetLeft, y: yes.offsetTop, w: yes.offsetWidth, h: yes.offsetHeight };
+      var nx = 0, ny = 0;
+      for (var k = 0; k < 24; k++) {
+        nx = Math.random() * Math.max(1, aw - nw);
+        ny = Math.random() * Math.max(1, ah - nh);
+        if (!overlap({ x: nx, y: ny, w: nw, h: nh }, yr)) break;
+      }
+      no.style.left = nx + 'px'; no.style.top = ny + 'px';
+    }
+    no.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') dodge(e); });
+    no.addEventListener('pointerdown', dodge);
+    no.addEventListener('click', function (e) { if (e.detail === 0) dodge(e); });
+  }
+  cards.forEach(function (c) { if (c.querySelector('.choices')) setupDodge(c); });
+
+  function show(i) {
+    idx = Math.max(0, Math.min(cards.length - 1, i));
+    cards.forEach(function (c, n) { c.hidden = n !== idx; });
+    $('#pn').textContent = ('0' + (idx + 1)).slice(-2);
+    var ds = dotsEl.children;
+    for (var n = 0; n < ds.length; n++) ds[n].className = n < idx ? 'on' : (n === idx ? 'now' : '');
+    var area = cards[idx].querySelector('.choices');
+    if (area && area._reset) area._reset();
+    if (cards[idx].id === 'eqcard') {
+      var s = $('#solve'); s.textContent = '?'; s.classList.remove('solved');
+      $('#eqnext').hidden = true; $('#eqhint').textContent = 'Tap the ? to solve it.';
+    }
+    if (cards[idx].id === 'endcard') { confetti(120); }
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-next]') : null;
+    if (b && !b.closest('#loader')) { show(idx + 1); }
+  });
+
+  $('#solve').addEventListener('click', function () {
+    var s = $('#solve');
+    if (s.classList.contains('solved')) return;
+    s.textContent = 'Sir Noman'; s.classList.add('solved');
+    $('#eqhint').textContent = 'Of course. Who else?';
+    $('#eqnext').hidden = false;
+    confetti(40);
+  });
+
+  $('#meet').addEventListener('click', function () {
+    loader.classList.add('gone');
+    $('#app').hidden = false;
+    show(0);
+  });
+  $('#more').addEventListener('click', function () { confetti(120); });
+  $('#again').addEventListener('click', function () { show(0); });
+
+  /* ---------- Music (original music-box tune, off until tapped) ---------- */
+  var actx = null, out = null, timer = null, step = 0, on = false;
+  /* Four bars of an original music-box tune over C, G, Am, F. 0 is a rest. */
+  var MELODY = [
+    659.25, 783.99, 659.25, 523.25, 587.33, 659.25, 783.99, 0,
+    587.33, 783.99, 587.33, 493.88, 523.25, 587.33, 783.99, 0,
+    523.25, 659.25, 523.25, 440.00, 493.88, 523.25, 659.25, 0,
+    440.00, 523.25, 698.46, 659.25, 587.33, 523.25, 587.33, 0
+  ];
+  var BASS = [130.81, 98.00, 110.00, 87.31];
+  var CHORDS = [
+    [261.63, 329.63, 392.00],
+    [246.94, 293.66, 392.00],
+    [220.00, 261.63, 329.63],
+    [220.00, 261.63, 349.23]
+  ];
+  function tone(freq, dur, vol, type, when) {
+    var t = actx.currentTime + (when || 0);
+    var o = actx.createOscillator(), gn = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(gn); gn.connect(out);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function beat() {
+    var pos = step % MELODY.length, bar = Math.floor(pos / 8), n = MELODY[pos];
+    if (n) {
+      tone(n, 0.9, 0.2, 'sine');
+      tone(n * 2, 0.45, 0.05, 'triangle');
+    }
+    if (pos % 8 === 0) {
+      tone(BASS[bar], 1.6, 0.26, 'sine');
+      CHORDS[bar].forEach(function (c) { tone(c, 1.8, 0.07, 'triangle'); });
+    }
+    if (pos % 8 === 4) tone(BASS[bar] * 2, 0.8, 0.12, 'sine');
+    step++;
+  }
+  function initAudio() {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    var comp = actx.createDynamicsCompressor();
+    out = actx.createGain();
+    out.gain.value = 0.9;
+    out.connect(comp); comp.connect(actx.destination);
+  }
+  $('#music').addEventListener('click', function () {
+    var btn = $('#music');
+    try {
+      if (!on) {
+        if (!actx) initAudio();
+        if (actx.resume) actx.resume();
+        step = 0; beat(); timer = setInterval(beat, 270);
+        on = true; btn.textContent = '♪ Music on';
+      } else {
+        clearInterval(timer); on = false; btn.textContent = '♪ Music off';
+      }
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    } catch (err) { btn.textContent = '♪ Not available'; }
+  });
+})();
+</script>
+
+</body></html>
